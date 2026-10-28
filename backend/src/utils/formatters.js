@@ -1,41 +1,45 @@
-const { users, auctions, bids } = require('../data/store');
+const User = require('../models/User');
+const Bid = require('../models/Bid');
+const Auction = require('../models/Auction');
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, ...safeUser } = user;
+  const safeUser = user.toObject ? user.toObject() : { ...user };
+  delete safeUser.password;
   return safeUser;
 }
 
-function getUserById(id) {
-  return users.find((user) => user._id === id);
-}
-
-function decorateAuction(auction) {
-  const auctionBids = bids.filter((bid) => bid.auction === auction._id);
+async function decorateAuction(auction) {
+  if (!auction) return null;
+  const bidCount = await Bid.countDocuments({ auction: auction._id });
+  const seller = await User.findById(auction.seller);
+  const highestBidder = auction.highestBidder
+    ? await User.findById(auction.highestBidder)
+    : null;
 
   return {
-    ...auction,
-    seller: publicUser(getUserById(auction.seller)),
-    highestBidder: publicUser(getUserById(auction.highestBidder)),
-    totalBids: auctionBids.length
+    ...auction.toObject(),
+    seller: publicUser(seller),
+    highestBidder: publicUser(highestBidder),
+    totalBids: bidCount
   };
 }
 
-function decorateBid(bid) {
-  return {
-    ...bid,
-    bidder: publicUser(getUserById(bid.bidder))
-  };
+async function decorateBid(bid) {
+  const bidder = await User.findById(bid.bidder);
+  return { ...bid.toObject(), bidder: publicUser(bidder) };
 }
 
-function decorateTransaction(transaction) {
-  const auction = auctions.find((item) => item._id === transaction.auction);
+async function decorateTransaction(transaction) {
+  const seller = await User.findById(transaction.seller);
+  const buyer = await User.findById(transaction.buyer);
+  const auction = await Auction.findById(transaction.auction);
 
   return {
-    ...transaction,
-    seller: publicUser(getUserById(transaction.seller)),
-    buyer: publicUser(getUserById(transaction.buyer)),
-    auction: decorateAuction(auction)
+    ...transaction.toObject(),
+    seller: publicUser(seller),
+    buyer: publicUser(buyer),
+    auction: await decorateAuction(auction)
   };
 }
 

@@ -1,32 +1,28 @@
-const { auctions, bids, notifications } = require('../data/store');
-const { createId, timestamp } = require('../utils/ids');
+const Auction = require('../models/Auction');
+const Notification = require('../models/Notification');
+const { createId } = require('../utils/ids');
 
-function closeExpiredAuctions() {
-  const currentTime = new Date();
+async function closeExpiredAuctions() {
+  const expiredAuctions = await Auction.find({
+    status: 'active',
+    endTime: { $lte: new Date() }
+  });
 
-  auctions.forEach((auction) => {
-    const closingTime = new Date(auction.endTime);
-    const hasEnded = auction.status === 'active' && closingTime <= currentTime;
-
-    if (!hasEnded) {
-      return;
-    }
+  for (const auction of expiredAuctions) {
+    auction.status = auction.highestBidder ? 'pending_approval' : 'unsold';
+    await auction.save();
 
     if (auction.highestBidder) {
-      auction.status = 'pending_approval';
-      notifications.push({
+      await Notification.create({
         _id: createId('notification'),
         recipient: auction.seller,
         auction: auction._id,
         title: 'Auction closed',
         message: 'A winning bid is ready for your approval.',
-        isRead: false,
-        createdAt: timestamp()
+        createdAt: new Date()
       });
-    } else {
-      auction.status = 'unsold';
     }
-  });
+  }
 }
 
 module.exports = { closeExpiredAuctions };

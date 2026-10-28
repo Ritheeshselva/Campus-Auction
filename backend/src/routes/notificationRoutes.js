@@ -1,21 +1,29 @@
 const express = require('express');
-const { notifications } = require('../data/store');
+const Notification = require('../models/Notification');
 const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', requireAuth(), (req, res) => {
-  const list = notifications.filter((item) => item.recipient === req.user._id);
-  res.json({ notifications: list, unreadCount: list.filter((item) => !item.isRead).length });
+router.get('/', requireAuth(), async (req, res) => {
+  const notifications = await Notification.find({ recipient: req.user._id }).sort({ createdAt: -1 });
+  res.json({
+    notifications,
+    unreadCount: notifications.filter((item) => !item.isRead).length
+  });
 });
-router.put('/:id/read', requireAuth(), (req, res) => {
-  const notification = notifications.find((item) => item._id === req.params.id && item.recipient === req.user._id);
+
+router.put('/:id/read', requireAuth(), async (req, res) => {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: req.params.id, recipient: req.user._id },
+    { isRead: true },
+    { new: true }
+  );
   if (!notification) return res.status(404).json({ message: 'Notification not found.' });
-  notification.isRead = true;
   res.json({ notification });
 });
-router.put('/read-all', requireAuth(), (req, res) => {
-  notifications.filter((item) => item.recipient === req.user._id).forEach((item) => { item.isRead = true; });
+
+router.put('/read-all', requireAuth(), async (req, res) => {
+  await Notification.updateMany({ recipient: req.user._id }, { isRead: true });
   res.json({ message: 'Notifications marked as read.' });
 });
 

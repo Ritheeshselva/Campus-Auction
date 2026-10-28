@@ -1,5 +1,5 @@
 const express = require('express');
-const { users } = require('../data/store');
+const User = require('../models/User');
 const { findUser, loginToken, requireAuth } = require('../middleware/auth');
 const { publicUser } = require('../utils/formatters');
 const { createId } = require('../utils/ids');
@@ -7,7 +7,7 @@ const { createId } = require('../utils/ids');
 const router = express.Router();
 
 // Create a new demo account with either the seller or user role.
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
   const role = req.body.role;
@@ -19,21 +19,21 @@ router.post('/register', (req, res) => {
     });
   }
 
-  if (users.some((user) => user.email === email)) {
+  if (await User.exists({ email })) {
     return res.status(409).json({
       message: 'An account with this email already exists.'
     });
   }
 
-  const newUser = {
+  const newUser = new User({
     _id: createId('user'),
     name,
     email,
     password,
     role
-  };
+  });
 
-  users.push(newUser);
+  await newUser.save();
 
   res.status(201).json({
     message: 'Account created successfully.',
@@ -43,8 +43,8 @@ router.post('/register', (req, res) => {
 });
 
 // Login for the default accounts and any accounts created in the demo.
-router.post('/login', (req, res) => {
-  const user = findUser(req.body.email);
+router.post('/login', async (req, res) => {
+  const user = await findUser(req.body.email);
 
   if (!user || user.password !== req.body.password) return res.status(401).json({ message: 'Invalid email or password.' });
 

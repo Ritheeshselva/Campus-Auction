@@ -1,20 +1,19 @@
 const jwt = require('jsonwebtoken');
 const { secret } = require('../config');
-const { users } = require('../data/store');
+const User = require('../models/User');
 
 // Find one of the two demo users by ID or email address.
-function findUser(value) {
+async function findUser(value) {
   const searchValue = String(value).toLowerCase();
-
-  return users.find((user) => (
-    user._id === searchValue || user.email === searchValue
-  ));
+  return User.findOne({
+    $or: [{ _id: searchValue }, { email: searchValue }]
+  });
 }
 
 // Check the login token sent by the frontend.
 // Some routes allow guests, so "required" can be set to false.
 function requireAuth(required = true) {
-  return function checkLogin(req, res, next) {
+  return async function checkLogin(req, res, next) {
     const header = req.headers.authorization;
 
     if (!header && !required) {
@@ -29,7 +28,7 @@ function requireAuth(required = true) {
     try {
       const token = header.slice(7);
       const tokenData = jwt.verify(token, secret);
-      const user = findUser(tokenData.id);
+      const user = await findUser(tokenData.id);
 
       if (!user) {
         return res.status(401).json({ message: 'Invalid or expired login.' });
