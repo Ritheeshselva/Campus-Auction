@@ -11,7 +11,8 @@ import {
   X,
   ExternalLink,
   ShieldCheck,
-  Building
+  Building,
+  UserRound
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
@@ -240,14 +241,9 @@ const Navbar = ({ onNavigate, currentPage }) => {
                   }}
                   className="flex items-center gap-2 p-1 rounded-full border-2 border-transparent hover:border-slate-200 transition"
                 >
-                  <img
-                    src={
-                      user?.avatar ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
-                    }
-                    alt={user?.name || 'User'}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                  <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+                    <UserRound className="w-4 h-4" />
+                  </span>
                 </button>
 
                 {showUserMenu && (

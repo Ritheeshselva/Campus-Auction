@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import {
   Gavel,
   ShieldCheck,
@@ -13,6 +14,7 @@ import {
   ArrowLeft,
   Share2,
   Calendar,
+  UserRound,
   CheckCircle2
 } from 'lucide-react';
 import api from '../api';
@@ -40,24 +42,49 @@ const AuctionDetailPage = ({ auctionId, onNavigate }) => {
   const [extensionAlert, setExtensionAlert] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const fetchAuction = async () => {
+  const fetchAuction = async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const res = await api.get(`/auctions/${auctionId}`);
       setAuction(res.data.auction);
       setBids(res.data.bids || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load auction details.');
+      if (showLoading) {
+        setError(err.response?.data?.message || 'Failed to load auction details.');
+      }
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    if (auctionId) {
-      fetchAuction();
+    if (!auctionId) {
+      return undefined;
     }
 
+    fetchAuction(true);
+
+    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
+    socket.emit('join-auction', auctionId);
+    socket.on('auction-updated', ({ auction: updatedAuction, bid }) => {
+      setAuction(updatedAuction);
+      setBids((previousBids) => {
+        if (previousBids.some((existingBid) => existingBid._id === bid._id)) {
+          return previousBids;
+        }
+
+        return [bid, ...previousBids];
+      });
+    });
+
+    return () => {
+      socket.emit('leave-auction', auctionId);
+      socket.disconnect();
+    };
   }, [auctionId]);
 
   if (loading) {
@@ -230,7 +257,7 @@ const AuctionDetailPage = ({ auctionId, onNavigate }) => {
               </span>
               <CountdownTimer
                 endTime={auction.endTime}
-                onExpire={() => setAuction((prev) => ({ ...prev, status: 'pending_approval' }))}
+                  onExpire={() => setAuction((prev) => ({ ...prev, status: 'pending_approval' }))}
               />
             </div>
 
@@ -322,14 +349,9 @@ const AuctionDetailPage = ({ auctionId, onNavigate }) => {
               Seller Information
             </h4>
             <div className="flex items-center gap-3">
-              <img
-                src={
-                  auction.seller?.avatar ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'
-                }
-                alt={auction.seller?.name}
-                className="w-12 h-12 rounded-full border border-slate-200 object-cover"
-              />
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+                <UserRound className="w-6 h-6" />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <h5 className="font-bold text-slate-900 text-sm truncate">{auction.seller?.name}</h5>
@@ -371,14 +393,9 @@ const AuctionDetailPage = ({ auctionId, onNavigate }) => {
                   return (
                     <div key={bid._id || index} className="py-2.5 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2.5">
-                        <img
-                          src={
-                            bid.bidder?.avatar ||
-                            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'
-                          }
-                          alt={bid.bidder?.name}
-                          className="w-7 h-7 rounded-full border border-slate-200 object-cover"
-                        />
+                        <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center">
+                          <UserRound className="w-4 h-4" />
+                        </div>
                         <div>
                           <span className="font-bold text-slate-800 block truncate max-w-[130px]">
                             {bid.bidder?.name || 'Anonymous Student'}
