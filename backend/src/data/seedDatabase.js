@@ -6,14 +6,29 @@ const {
   demoUserEmail,
   demoUserPassword
 } = require('../config');
+const { hashPassword, isHashedPassword } = require('../utils/passwords');
 
 async function seedDatabase() {
   if (await User.countDocuments() === 0) {
     await User.insertMany([
-      { _id: 'seller_1', name: 'Demo Seller', email: demoSellerEmail, password: demoSellerPassword, role: 'seller' },
-      { _id: 'user_1', name: 'Demo User', email: demoUserEmail, password: demoUserPassword, role: 'user' }
+      {
+        _id: 'seller_1',
+        name: 'Demo Seller',
+        email: demoSellerEmail,
+        password: await hashPassword(demoSellerPassword),
+        role: 'seller'
+      },
+      {
+        _id: 'user_1',
+        name: 'Demo User',
+        email: demoUserEmail,
+        password: await hashPassword(demoUserPassword),
+        role: 'user'
+      }
     ]);
   }
+
+  await upgradePlainTextPasswords();
 
   if (await Auction.countDocuments() === 0) {
     await Auction.insertMany([
@@ -46,6 +61,17 @@ async function seedDatabase() {
         createdAt: new Date()
       }
     ]);
+  }
+}
+
+async function upgradePlainTextPasswords() {
+  const users = await User.find({}, 'password');
+
+  for (const user of users) {
+    if (!isHashedPassword(user.password)) {
+      user.password = await hashPassword(user.password);
+      await user.save();
+    }
   }
 }
 

@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { findUser, loginToken, requireAuth } = require('../middleware/auth');
 const { publicUser } = require('../utils/formatters');
 const { createId } = require('../utils/ids');
+const { hashPassword, passwordMatches } = require('../utils/passwords');
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.post('/register', async (req, res) => {
     _id: createId('user'),
     name,
     email,
-    password,
+    password: await hashPassword(password),
     role
   });
 
@@ -46,7 +47,9 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const user = await findUser(req.body.email);
 
-  if (!user || user.password !== req.body.password) return res.status(401).json({ message: 'Invalid email or password.' });
+  const validPassword = user && await passwordMatches(String(req.body.password || ''), user.password);
+
+  if (!validPassword) return res.status(401).json({ message: 'Invalid email or password.' });
 
   res.json({ token: loginToken(user), user: publicUser(user) });
 });
