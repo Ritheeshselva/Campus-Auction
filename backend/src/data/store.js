@@ -1,8 +1,8 @@
 const { timestamp } = require('../utils/ids');
 
 const users = [
-  { _id: 'seller_1', name: 'Demo Seller', email: 'seller@gmail.com', password: 'seller', role: 'seller', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Seller' },
-  { _id: 'user_1', name: 'Demo User', email: 'user@gmail.com', password: 'user', role: 'user', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=User' }
+  { _id: 'seller_1', name: 'Demo Seller', email: 'seller@gmail.com', password: 'seller', role: 'seller' },
+  { _id: 'user_1', name: 'Demo User', email: 'user@gmail.com', password: 'user', role: 'user' }
 ];
 
 const auctions = [
