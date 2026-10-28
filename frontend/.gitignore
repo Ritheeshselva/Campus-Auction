@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage and temporary files
+coverage/
+.cache/
+tmp/
+temp/
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
